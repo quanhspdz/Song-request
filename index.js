@@ -2,8 +2,16 @@ const express = require("express");
 const { google } = require("googleapis");
 
 const app = express();
+app.set("view engine", "ejs");
+app.use(express.urlencoded({extended: true}));
 
-app.get("/", async (req, res) => {
+app.get("/", (req, res) => {
+  res.render("index");
+});
+
+app.post("/", async (req, res) => {
+  const {request, name} = req.body;
+
   const auth = new google.auth.GoogleAuth({
     keyFile: "credentials.json",
     scopes: "https://www.googleapis.com/auth/spreadsheets",
@@ -23,7 +31,30 @@ app.get("/", async (req, res) => {
     spreadsheetId,
   });
 
-  res.send(metaData);
+  //Read rows from spreadsheet
+  sheetName = "Song and Requester";
+  const getRows = await googleSheets.spreadsheets.values.get({
+    auth,
+    spreadsheetId,
+    range: sheetName,
+  });
+
+  //Write row(s) to spreadsheet
+  const requestedSong = request;
+  const requesterName = name;
+  await googleSheets.spreadsheets.values.append({
+    auth, 
+    spreadsheetId,
+    range: sheetName + "!A:B",
+    valueInputOption: "USER_ENTERED",
+    resource: {
+      values: [
+        [requestedSong, requesterName],
+      ]
+    }
+  });
+
+  res.send("Successfully submitted!");
 });
 
 const port = 1337;
